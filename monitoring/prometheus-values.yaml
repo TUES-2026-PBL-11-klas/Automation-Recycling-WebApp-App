@@ -1,0 +1,74 @@
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    resources:
+      requests:
+        memory: 400Mi
+        cpu: 100m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 50m
+  config:
+    global:
+      resolve_timeout: 5m
+    receivers:
+      - name: "null"
+      # To enable alerting: replace the URL below with your webhook endpoint
+      - name: webhook
+        webhook_configs:
+          - url: "http://your-webhook-endpoint/alerts"
+            send_resolved: true
+    route:
+      receiver: "null"
+      group_by: [alertname, namespace]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      routes:
+        # Silence the always-firing Watchdog alert
+        - matchers:
+            - alertname = "Watchdog"
+          receiver: "null"
+        # Route app alerts to webhook
+        - matchers:
+            - namespace = "recycling-app"
+          receiver: webhook
+
+grafana:
+  adminPassword: admin
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+  sidecar:
+    datasources:
+      enabled: true
+    dashboards:
+      enabled: true
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki:3100
+      access: proxy
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false
+    general: true
+    k8s: true
+    kubeApiserver: false
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    node: true
+    prometheus: true

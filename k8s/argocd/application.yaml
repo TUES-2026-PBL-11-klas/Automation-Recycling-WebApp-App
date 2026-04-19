@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: recycling-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Uspeshniq/Automation-Recycling-WebApp-App.git
+    targetRevision: main
+    path: k8s/base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: recycling-app
+  syncPolicy:
+    automated:
+      prune: true       # Remove resources deleted from git
+      selfHeal: true    # Revert manual cluster changes
+    syncOptions:
+      - CreateNamespace=true
