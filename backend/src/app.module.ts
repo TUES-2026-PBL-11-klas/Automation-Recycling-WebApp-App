@@ -10,6 +10,8 @@ import { DistrictsModule } from './districts/districts.module';
 import { ElectronicsModule } from './electronics/electronics.module';
 import { PickupRequestsModule } from './pickup-requests/pickup-requests.module';
 import { AdminModule } from './admin/admin.module';
+import { MailModule } from './mail/mail.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { AdminModule } from './admin/admin.module';
     DistrictsModule,
     ElectronicsModule,
     PickupRequestsModule,
+    MailModule,
+    SchedulerModule,
     AdminModule,
   ],
   controllers: [AppController],
