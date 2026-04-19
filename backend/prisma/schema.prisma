@@ -146,6 +146,7 @@ model ElectronicsItem {
   defaultWeight Float
   defaultVolume Float
   isActive      Boolean @default(true)
+  isSmallItem   Boolean @default(false)
 
   requestItems RequestItem[]
 }
@@ -223,6 +224,7 @@ model Route {
   status               RouteStatus @default(PLANNED)
   totalEstimatedWeight Float?
   totalEstimatedVolume Float?
+  emailSentAt          DateTime?
   createdAt            DateTime    @default(now())
 
   team     Team?     @relation(fields: [teamId], references: [id])
@@ -237,6 +239,7 @@ model RouteStop {
   routeId            String
   requestId          String
   stopOrder          Int
+  isReserve          Boolean         @default(false)
   plannedArrivalTime String?
   actualArrivalTime  String?
   status             RouteStopStatus @default(PENDING)

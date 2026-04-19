@@ -54,26 +54,34 @@ async function main() {
     console.log(`✔ Seeded ${districtNames.length} districts`);
   }
 
-  const electronicsCount = await prisma.electronicsItem.count();
-  if (electronicsCount === 0) {
-    await prisma.electronicsItem.createMany({
-      data: [
-        { name: 'Телевизор', category: 'Дисплеи', defaultWeight: 15, defaultVolume: 0.15 },
-        { name: 'Лаптоп', category: 'Компютри', defaultWeight: 2, defaultVolume: 0.005 },
-        { name: 'Настолен компютър', category: 'Компютри', defaultWeight: 8, defaultVolume: 0.02 },
-        { name: 'Монитор', category: 'Дисплеи', defaultWeight: 5, defaultVolume: 0.05 },
-        { name: 'Телефон / Таблет', category: 'Мобилни устройства', defaultWeight: 0.3, defaultVolume: 0.001 },
-        { name: 'Перална машина', category: 'Уреди', defaultWeight: 70, defaultVolume: 0.35 },
-        { name: 'Хладилник', category: 'Уреди', defaultWeight: 60, defaultVolume: 0.4 },
-        { name: 'Микровълнова печка', category: 'Уреди', defaultWeight: 12, defaultVolume: 0.04 },
-        { name: 'Принтер', category: 'Офис техника', defaultWeight: 5, defaultVolume: 0.02 },
-        { name: 'Климатик', category: 'Уреди', defaultWeight: 25, defaultVolume: 0.1 },
-        { name: 'Прахосмукачка', category: 'Уреди', defaultWeight: 5, defaultVolume: 0.05 },
-        { name: 'Кабели / Аксесоари', category: 'Аксесоари', defaultWeight: 1, defaultVolume: 0.003 },
-      ],
-    });
+  {
+    const electronicsData = [
+      { name: 'Телевизор',          category: 'Дисплеи',            defaultWeight: 15,  defaultVolume: 0.15,  isSmallItem: false },
+      { name: 'Лаптоп',             category: 'Компютри',           defaultWeight: 2,   defaultVolume: 0.005, isSmallItem: false },
+      { name: 'Настолен компютър',  category: 'Компютри',           defaultWeight: 8,   defaultVolume: 0.02,  isSmallItem: false },
+      { name: 'Монитор',            category: 'Дисплеи',            defaultWeight: 5,   defaultVolume: 0.05,  isSmallItem: false },
+      { name: 'Телефон / Таблет',   category: 'Мобилни устройства', defaultWeight: 0.3, defaultVolume: 0.001, isSmallItem: true  },
+      { name: 'Перална машина',     category: 'Уреди',              defaultWeight: 70,  defaultVolume: 0.35,  isSmallItem: false },
+      { name: 'Хладилник',          category: 'Уреди',              defaultWeight: 60,  defaultVolume: 0.4,   isSmallItem: false },
+      { name: 'Микровълнова печка', category: 'Уреди',              defaultWeight: 12,  defaultVolume: 0.04,  isSmallItem: false },
+      { name: 'Принтер',            category: 'Офис техника',       defaultWeight: 5,   defaultVolume: 0.02,  isSmallItem: false },
+      { name: 'Климатик',           category: 'Уреди',              defaultWeight: 25,  defaultVolume: 0.1,   isSmallItem: false },
+      { name: 'Прахосмукачка',      category: 'Уреди',              defaultWeight: 5,   defaultVolume: 0.05,  isSmallItem: false },
+      { name: 'Кабели / Аксесоари', category: 'Аксесоари',          defaultWeight: 1,   defaultVolume: 0.003, isSmallItem: true  },
+      { name: 'Миксер',             category: 'Малки уреди',        defaultWeight: 1.5, defaultVolume: 0.004, isSmallItem: true  },
+      { name: 'Кафемашина',         category: 'Малки уреди',        defaultWeight: 3,   defaultVolume: 0.006, isSmallItem: true  },
+      { name: 'Ютия',               category: 'Малки уреди',        defaultWeight: 1.2, defaultVolume: 0.003, isSmallItem: true  },
+    ];
 
-    console.log('✔ Seeded 12 electronics items');
+    for (const item of electronicsData) {
+      await prisma.electronicsItem.upsert({
+        where: { name: item.name },
+        update: { isSmallItem: item.isSmallItem },
+        create: item,
+      });
+    }
+
+    console.log('✔ Seeded/updated electronics items');
   }
 }
 
