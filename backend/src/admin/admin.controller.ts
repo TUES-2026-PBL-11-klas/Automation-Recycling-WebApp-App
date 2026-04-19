@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { AdminService } from './admin.service';
+import { SchedulerService } from '../scheduler/scheduler.service';
 import { AdminUpdateRequestDto, AdminScheduleRouteDto } from './dto/admin-update-request.dto';
 import { AdminCreatePickupRequestDto } from '../pickup-requests/dto/create-pickup-request.dto';
 
@@ -11,7 +12,10 @@ import { AdminCreatePickupRequestDto } from '../pickup-requests/dto/create-picku
 @Roles(Role.ADMIN)
 @Controller('admin')
 export class AdminController {
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private schedulerService: SchedulerService,
+  ) {}
 
   @Get('requests')
   findAllRequests(
@@ -49,5 +53,20 @@ export class AdminController {
   @Post('routes/schedule')
   scheduleRoute(@Body() dto: AdminScheduleRouteDto) {
     return this.adminService.scheduleRoute(dto);
+  }
+
+  // Run the full scheduling algorithm for a specific district
+  @Post('scheduler/run/:districtId')
+  runScheduler(@Param('districtId') districtId: string) {
+    return this.schedulerService.runForDistrict(districtId);
+  }
+
+  // Handle a last-moment cancellation on a route that already had emails sent
+  @Post('routes/:routeId/cancel-stop/:requestId')
+  handleCancellation(
+    @Param('routeId') routeId: string,
+    @Param('requestId') requestId: string,
+  ) {
+    return this.schedulerService.handleCancellation(routeId, requestId);
   }
 }
