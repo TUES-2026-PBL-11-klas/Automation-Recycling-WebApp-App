@@ -77,8 +77,9 @@ export default function NewRequestPage() {
     setQuantities((prev) => {
       const next = (prev[id] ?? 0) + delta;
       if (next <= 0) {
-        const { [id]: _removed, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[id];
+        return next;
       }
       return { ...prev, [id]: next };
     });
