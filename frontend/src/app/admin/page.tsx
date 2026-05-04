@@ -12,6 +12,7 @@ import {
   adminGetRequests, adminUpdateRequest, adminDeleteRequest,
   adminGetDistricts, adminScheduleRoute, logoutUser,
 } from '@/lib/api';
+import type { District, PickupRequest, RequestItem, RouteResult, RouteStop } from '@/lib/types';
 
 type RequestStatus = 'PENDING' | 'CONFIRMED' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
 
@@ -43,7 +44,7 @@ export default function AdminPage() {
   const [showRouteModal, setShowRouteModal] = useState(false);
   const [routeDistrictId, setRouteDistrictId] = useState('');
   const [routeDate, setRouteDate] = useState('');
-  const [routeResult, setRouteResult] = useState<any>(null);
+  const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['adminRequests', statusFilter, districtFilter],
@@ -77,9 +78,9 @@ export default function AdminPage() {
 
   const stats = {
     total: requests.length,
-    pending: requests.filter((r: any) => r.status === 'PENDING').length,
-    confirmed: requests.filter((r: any) => r.status === 'CONFIRMED').length,
-    completed: requests.filter((r: any) => r.status === 'COMPLETED').length,
+    pending: requests.filter((r: PickupRequest) => r.status === 'PENDING').length,
+    confirmed: requests.filter((r: PickupRequest) => r.status === 'CONFIRMED').length,
+    completed: requests.filter((r: PickupRequest) => r.status === 'COMPLETED').length,
   };
 
   const handleScheduleRequest = (id: string) => {
@@ -130,7 +131,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {routeResult.stops?.map((stop: any, i: number) => (
+                  {routeResult.stops?.map((stop: RouteStop, i: number) => (
                     <div key={stop.id} className="flex items-center gap-3 p-3 bg-secondary/30 rounded-xl border border-border/30 text-sm">
                       <span className="w-6 h-6 rounded-full bg-accent/20 text-accent text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
                       <span className="text-white">
@@ -150,7 +151,7 @@ export default function AdminPage() {
                   <select value={routeDistrictId} onChange={(e) => setRouteDistrictId(e.target.value)}
                     className="w-full bg-secondary/50 border border-border rounded-xl py-3 px-4 text-white focus:outline-none focus:border-accent transition-all">
                     <option value="">Изберете квартал</option>
-                    {districts.map((d: any) => (
+                    {districts.map((d: District) => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
                   </select>
@@ -260,7 +261,7 @@ export default function AdminPage() {
               <p className="text-muted-foreground">Няма намерени заявки.</p>
             </div>
           ) : (
-            requests.map((req: any) => {
+            requests.map((req: PickupRequest) => {
               const st = statusConfig[req.status as RequestStatus];
               const StatusIcon = st.icon;
               const isScheduling = schedulingId === req.id;
@@ -284,7 +285,7 @@ export default function AdminPage() {
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1"><MapPin size={12} /> {req.address?.district?.name} — {req.address?.street} {req.address?.buildingNumber}</span>
-                        <span className="flex items-center gap-1"><Package size={12} /> {req.items?.reduce((s: number, i: any) => s + i.quantity, 0)} бр. • {req.estimatedTotalWeight?.toFixed(1)} кг</span>
+                        <span className="flex items-center gap-1"><Package size={12} /> {req.items?.reduce((s: number, i: RequestItem) => s + i.quantity, 0)} бр. • {req.estimatedTotalWeight?.toFixed(1)} кг</span>
                         {req.scheduledDate && (
                           <span className="flex items-center gap-1 text-blue-400">
                             <CalendarDays size={12} />
@@ -294,7 +295,7 @@ export default function AdminPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {req.items?.map((item: any) => (
+                        {req.items?.map((item: RequestItem) => (
                           <span key={item.id} className="text-xs bg-secondary/50 text-muted-foreground px-2 py-0.5 rounded-full border border-border/40">
                             {item.electronicsItem?.name} ×{item.quantity}
                           </span>
