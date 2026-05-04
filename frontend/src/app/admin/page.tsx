@@ -246,7 +246,7 @@ export default function AdminPage() {
           <select value={districtFilter} onChange={(e) => setDistrictFilter(e.target.value)}
             className="bg-secondary/50 border border-border rounded-xl py-2 px-3 text-sm text-white focus:outline-none focus:border-accent transition-all">
             <option value="">Всички квартали</option>
-            {districts.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            {districts.map((d: District) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
 
