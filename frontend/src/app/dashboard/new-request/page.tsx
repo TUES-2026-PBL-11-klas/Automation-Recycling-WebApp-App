@@ -8,6 +8,7 @@ import {
   Loader2, Recycle, Plus, Minus, Check, X, Clock, Zap,
 } from 'lucide-react';
 import { getDistricts, getElectronics, createRequest } from '@/lib/api';
+import type { District, ElectronicsItem } from '@/lib/types';
 
 type Step = 1 | 2 | 3;
 
@@ -65,7 +66,7 @@ export default function NewRequestPage() {
   const { data: districts = [] } = useQuery({ queryKey: ['districts'], queryFn: getDistricts });
   const { data: electronics = [] } = useQuery({ queryKey: ['electronics'], queryFn: getElectronics });
 
-  const categories = [...new Set(electronics.map((e: any) => e.category))];
+  const categories = [...new Set(electronics.map((e: ElectronicsItem) => e.category))];
 
   const submitMutation = useMutation({
     mutationFn: createRequest,
@@ -76,7 +77,7 @@ export default function NewRequestPage() {
     setQuantities((prev) => {
       const next = (prev[id] ?? 0) + delta;
       if (next <= 0) {
-        const { [id]: _, ...rest } = prev;
+        const { [id]: _removed, ...rest } = prev;
         return rest;
       }
       return { ...prev, [id]: next };
@@ -214,7 +215,7 @@ export default function NewRequestPage() {
                   className="w-full bg-secondary/50 border border-border rounded-xl py-3 px-4 text-white focus:outline-none focus:border-primary transition-all"
                 >
                   <option value="">Изберете квартал</option>
-                  {districts.map((d: any) => (
+                  {districts.map((d: District) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
@@ -282,7 +283,7 @@ export default function NewRequestPage() {
                 <div key={cat as string}>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{cat as string}</p>
                   <div className="flex flex-col gap-2">
-                    {electronics.filter((e: any) => e.category === cat).map((item: any) => (
+                    {electronics.filter((e: ElectronicsItem) => e.category === cat).map((item: ElectronicsItem) => (
                       <div key={item.id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl border border-border/40">
                         <div>
                           <p className="text-white font-medium text-sm">{item.name}</p>
@@ -311,8 +312,8 @@ export default function NewRequestPage() {
               <div className="mt-4 p-3 bg-primary/10 rounded-xl border border-primary/20 text-sm text-primary font-medium">
                 Избрани: {totalItems} бр. &mdash;{' '}
                 {electronics
-                  .filter((e: any) => quantities[e.id])
-                  .reduce((s: number, e: any) => s + e.defaultWeight * quantities[e.id], 0)
+                  .filter((e: ElectronicsItem) => quantities[e.id])
+                  .reduce((s: number, e: ElectronicsItem) => s + e.defaultWeight * quantities[e.id], 0)
                   .toFixed(1)} кг прибл.
               </div>
             )}
