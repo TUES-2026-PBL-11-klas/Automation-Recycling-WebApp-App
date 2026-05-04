@@ -16,6 +16,7 @@ spec:
       containers:
         - name: frontend
           image: boqnbabanin/recycling-frontend:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
           env:
@@ -34,3 +35,9 @@ spec:
               port: 3000
             initialDelaySeconds: 10
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
