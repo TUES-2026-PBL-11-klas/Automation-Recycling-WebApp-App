@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: boqnbabanin/recycling-frontend:latest
+          image: boqnbabanin/recycling-frontend:7af09cbf8fc64e4563a716c682cf3dd6ce1007ba
           imagePullPolicy: Never
           ports:
             - containerPort: 3000
