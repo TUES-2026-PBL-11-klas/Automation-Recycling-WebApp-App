@@ -20,7 +20,7 @@ spec:
       containers:
         - name: backend
 
-          image: boqnbabanin/recycling-backend:e802ffb269499f13be258c0955f8d027fd4f3fd9
+          image: boqnbabanin/recycling-backend:f8de21a8de4fa7cb69a8dbf2973a743dc382c04b
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4000
