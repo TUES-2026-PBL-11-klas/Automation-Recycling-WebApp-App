@@ -13,7 +13,8 @@ import {
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { Prisma } from '@prisma/client';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 type AuthUser = { userId: string; email: string; role: string };
 
@@ -22,14 +23,14 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() body: Prisma.UserCreateInput) {
+  async register(@Body() body: RegisterDto) {
     return this.authService.register(body);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(
-    @Body() body: { email: string; password: string },
+    @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateUser(body.email, body.password);

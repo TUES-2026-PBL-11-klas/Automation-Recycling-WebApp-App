@@ -1,8 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/register.dto';
 
 type AuthUser = Omit<User, 'password'>;
 
@@ -29,15 +30,18 @@ export class AuthService {
     };
   }
 
-  async register(data: Prisma.UserCreateInput) {
+  async register(data: RegisterDto) {
     const existing = await this.usersService.findByEmail(data.email);
     if (existing) {
       throw new BadRequestException('Email already in use');
     }
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    // Listed field by field rather than spread, so a client cannot set role
+    // even if the request ever reaches here unvalidated.
     const user = await this.usersService.create({
-      ...data,
-      password: hashedPassword,
+      name: data.name,
+      email: data.email,
+      phoneNumber: data.phoneNumber,
+      password: await bcrypt.hash(data.password, 10),
     });
 
     const { password: _password, ...result } = user;
