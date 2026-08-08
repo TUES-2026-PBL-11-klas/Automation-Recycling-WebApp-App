@@ -23,9 +23,30 @@ spec:
       # against a schema it does not match.
       initContainers:
         - name: migrate
-          image: boqnbabanin/recycling-backend:b2ee3b11144102d29f48a07dbc005a9f81ba825c
+          image: boqnbabanin/recycling-backend
           imagePullPolicy: IfNotPresent
           command: ["npx", "prisma", "migrate", "deploy"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: database-url
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+        # Runs the compiled seed rather than `prisma db seed`, which needs the
+        # prisma.seed config from package.json — not shipped in the runtime
+        # image. The script skips districts when any exist and upserts the
+        # electronics catalogue, so repeat runs leave existing data alone.
+        - name: seed
+          image: boqnbabanin/recycling-backend
+          imagePullPolicy: IfNotPresent
+          command: ["node", "dist/prisma/seed.js"]
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -42,7 +63,7 @@ spec:
       containers:
         - name: backend
 
-          image: boqnbabanin/recycling-backend:b2ee3b11144102d29f48a07dbc005a9f81ba825c
+          image: boqnbabanin/recycling-backend
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4000

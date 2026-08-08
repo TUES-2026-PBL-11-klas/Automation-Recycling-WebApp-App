@@ -1,6 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Single source of truth for image tags. The manifests reference the images
+# without a tag, so this applies to every container and initContainer at once
+# and they cannot drift apart. CI rewrites the newTag lines below.
+images:
+  - name: boqnbabanin/recycling-backend
+    newTag: b2ee3b11144102d29f48a07dbc005a9f81ba825c
+  - name: boqnbabanin/recycling-frontend
+    newTag: b2ee3b11144102d29f48a07dbc005a9f81ba825c
+
 resources:
   - namespace.yaml
   - postgres/pvc.yaml
