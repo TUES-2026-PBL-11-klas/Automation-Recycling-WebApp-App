@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // The runtime image is Alpine, which ships only OpenSSL 3. Without this,
+  // generate resolves "native" to the OpenSSL 1.1 engine and the client
+  // cannot load a query engine in the container.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

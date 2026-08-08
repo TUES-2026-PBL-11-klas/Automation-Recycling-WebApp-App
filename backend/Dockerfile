@@ -1,6 +1,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Prisma probes libssl to pick a query engine; without openssl installed it
+# misdetects and falls back to the OpenSSL 1.1 build.
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 RUN npm ci
 
@@ -13,6 +17,8 @@ RUN npm run build
 
 FROM node:20-alpine AS production
 WORKDIR /app
+
+RUN apk add --no-cache openssl
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
 
