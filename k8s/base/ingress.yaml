@@ -3,9 +3,11 @@ kind: Ingress
 metadata:
   name: recycling-ingress
   namespace: recycling-app
-  annotations:
-    kubernetes.io/ingress.class: "traefik"
 spec:
+  # The cluster runs ingress-nginx. The old kubernetes.io/ingress.class
+  # annotation named traefik, a k3s default that is not installed here, so no
+  # controller claimed the Ingress and it never got an address.
+  ingressClassName: nginx
   rules:
     - host: recycling.local
       http:
