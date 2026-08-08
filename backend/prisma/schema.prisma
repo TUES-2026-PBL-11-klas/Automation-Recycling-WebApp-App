@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // The runtime image is Alpine, which ships only OpenSSL 3. Without this,
   // generate resolves "native" to the OpenSSL 1.1 engine and the client
   // cannot load a query engine in the container.
@@ -114,6 +114,9 @@ model Address {
   user           User            @relation(fields: [userId], references: [id])
   district       District        @relation(fields: [districtId], references: [id])
   pickupRequests PickupRequest[]
+
+  @@index([userId])
+  @@index([districtId])
 }
 
 model PickupRequest {
@@ -141,6 +144,12 @@ model PickupRequest {
   availabilityPreferences AvailabilityPreference[]
   routeStops              RouteStop[]
   notifications           Notification[]
+
+  // The scheduler filters on status + routeId within a district on every run
+  @@index([status, routeId])
+  @@index([userId])
+  @@index([addressId])
+  @@index([routeId])
 }
 
 model ElectronicsItem {
@@ -166,6 +175,9 @@ model RequestItem {
 
   request         PickupRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
   electronicsItem ElectronicsItem @relation(fields: [electronicsItemId], references: [id])
+
+  @@index([requestId])
+  @@index([electronicsItemId])
 }
 
 model AvailabilitySlot {
@@ -177,6 +189,8 @@ model AvailabilitySlot {
   isFlexible    Boolean  @default(false)
 
   request PickupRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
 }
 
 model AvailabilityPreference {
@@ -186,6 +200,8 @@ model AvailabilityPreference {
   value          String?
 
   request PickupRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
 }
 
 model Vehicle {
@@ -217,6 +233,8 @@ model TeamMember {
   role        String
 
   team Team @relation(fields: [teamId], references: [id])
+
+  @@index([teamId])
 }
 
 model Route {
@@ -231,11 +249,14 @@ model Route {
   emailSentAt          DateTime?
   createdAt            DateTime    @default(now())
 
-  team     Team?     @relation(fields: [teamId], references: [id])
-  vehicle  Vehicle?  @relation(fields: [vehicleId], references: [id])
-  district District  @relation(fields: [districtId], references: [id])
+  team     Team?           @relation(fields: [teamId], references: [id])
+  vehicle  Vehicle?        @relation(fields: [vehicleId], references: [id])
+  district District        @relation(fields: [districtId], references: [id])
   stops    RouteStop[]
   requests PickupRequest[]
+
+  @@index([districtId, status])
+  @@index([emailSentAt])
 }
 
 model RouteStop {
@@ -250,6 +271,10 @@ model RouteStop {
 
   route   Route         @relation(fields: [routeId], references: [id])
   request PickupRequest @relation(fields: [requestId], references: [id])
+
+  @@index([routeId])
+  @@index([requestId])
+  @@index([isReserve])
 }
 
 model Notification {
@@ -264,4 +289,7 @@ model Notification {
 
   user    User           @relation(fields: [userId], references: [id])
   request PickupRequest? @relation(fields: [requestId], references: [id])
+
+  @@index([status, scheduledFor])
+  @@index([userId])
 }

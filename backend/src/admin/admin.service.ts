@@ -94,8 +94,11 @@ export class AdminService {
     const { districtId, routeDate, vehicleId, teamId } = dto;
     const date = new Date(routeDate);
 
+    // routeId must be null: without it this picks up requests already assigned
+    // to another route, repoints them here, and leaves the original route
+    // holding a stop for a request that no longer belongs to it.
     const requests = await this.prisma.pickupRequest.findMany({
-      where: { address: { districtId }, status: 'CONFIRMED' },
+      where: { address: { districtId }, status: 'CONFIRMED', routeId: null },
     });
 
     if (requests.length === 0) {
@@ -110,6 +113,7 @@ export class AdminService {
         where: {
           address: { districtId: { in: neighborIds } },
           status: 'CONFIRMED',
+          routeId: null,
         },
       });
 

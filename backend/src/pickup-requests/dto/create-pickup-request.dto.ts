@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -8,6 +10,8 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -19,10 +23,12 @@ export class CreateRequestItemDto {
 
   @IsInt()
   @Min(1)
+  @Max(100)
   quantity: number;
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   notes?: string;
 }
 
@@ -77,15 +83,20 @@ export class CreatePickupRequestDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   additionalNotes?: string;
 
   @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => CreateRequestItemDto)
   items: CreateRequestItemDto[];
 
   @IsOptional()
   @IsArray()
+  // One slot per day over the 14-day booking window the UI offers
+  @ArrayMaxSize(14)
   @ValidateNested({ each: true })
   @Type(() => CreateAvailabilitySlotDto)
   availabilitySlots?: CreateAvailabilitySlotDto[];
@@ -98,6 +109,7 @@ export class CreatePickupRequestDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   preferredNote?: string;
 }
 
