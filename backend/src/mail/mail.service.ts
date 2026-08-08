@@ -1,9 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
+import { MetricsService } from '../health/metrics.service';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
+
+  constructor(private metrics: MetricsService) {}
+
   // The Resend constructor throws on a missing key. Notifications are not
   // essential to serving the API, so run without them rather than refusing
   // to boot when the key is absent.
@@ -33,6 +37,7 @@ export class MailService {
   ): Promise<boolean> {
     if (!this.resend) {
       this.logger.warn(`RESEND_API_KEY not set — skipped reminder to ${to}`);
+      this.metrics.recordEmail('reminder', 'skipped');
       return false;
     }
     try {
@@ -51,11 +56,14 @@ export class MailService {
       });
       if (error) {
         this.logger.error(`Reminder to ${to} rejected by Resend`, error);
+        this.metrics.recordEmail('reminder', 'failed');
         return false;
       }
+      this.metrics.recordEmail('reminder', 'sent');
       return true;
     } catch (e) {
       this.logger.error(`Failed to send reminder to ${to}`, e);
+      this.metrics.recordEmail('reminder', 'failed');
       return false;
     }
   }
@@ -86,6 +94,7 @@ export class MailService {
       this.logger.warn(
         `RESEND_API_KEY not set — skipped confirmation to ${to}`,
       );
+      this.metrics.recordEmail('confirmation', 'skipped');
       return;
     }
 
@@ -107,8 +116,10 @@ export class MailService {
           </div>
         `,
       });
+      this.metrics.recordEmail('confirmation', 'sent');
     } catch (e) {
       this.logger.error(`Failed to send pickup confirmation to ${to}`, e);
+      this.metrics.recordEmail('confirmation', 'failed');
     }
   }
 
@@ -138,6 +149,7 @@ export class MailService {
       this.logger.warn(
         `RESEND_API_KEY not set — skipped reserve activation to ${to}`,
       );
+      this.metrics.recordEmail('reserve', 'skipped');
       return;
     }
 
@@ -158,8 +170,10 @@ export class MailService {
           </div>
         `,
       });
+      this.metrics.recordEmail('reserve', 'sent');
     } catch (e) {
       this.logger.error(`Failed to send reserve activation email to ${to}`, e);
+      this.metrics.recordEmail('reserve', 'failed');
     }
   }
 
@@ -171,6 +185,7 @@ export class MailService {
       this.logger.warn(
         `RESEND_API_KEY not set — skipped cancellation notice to ${to}`,
       );
+      this.metrics.recordEmail('cancellation', 'skipped');
       return;
     }
 
@@ -189,8 +204,10 @@ export class MailService {
           </div>
         `,
       });
+      this.metrics.recordEmail('cancellation', 'sent');
     } catch (e) {
       this.logger.error(`Failed to send cancellation notice to ${to}`, e);
+      this.metrics.recordEmail('cancellation', 'failed');
     }
   }
 }

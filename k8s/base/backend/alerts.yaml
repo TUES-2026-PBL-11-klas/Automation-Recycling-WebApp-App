@@ -1,0 +1,53 @@
+# Alert rules for kube-prometheus-stack. The release label is how the stack's
+# default ruleSelector discovers PrometheusRules; without it these are ignored.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ecorecycle-backend
+  namespace: recycling-app
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: ecorecycle.rules
+      rules:
+        - alert: EcoRecycleBackendDown
+          # No backend target has been scrapeable for 5 minutes.
+          expr: absent(up{job="backend"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: EcoRecycle backend is unreachable
+            description: >-
+              No backend instance has answered a metrics scrape for 5 minutes.
+              The API is likely down.
+
+        - alert: EcoRecycleEmailFailures
+          # Any reminder or notification email has failed to send in the last
+          # 15 minutes. MailService used to swallow these silently.
+          expr: increase(ecorecycle_emails_total{outcome="failed"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: EcoRecycle is failing to send email
+            description: >-
+              At least one {{ $labels.kind }} email failed in the last 15
+              minutes. Check the Resend key and the backend logs.
+
+        - alert: EcoRecycleBackupMissing
+          # kube-state-metrics exposes CronJob last-success; alert if the nightly
+          # database backup has not completed in over 26 hours.
+          expr: >-
+            time() -
+            kube_cronjob_status_last_successful_time{cronjob="postgres-backup"}
+            > 26 * 3600
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: EcoRecycle database backup has not run
+            description: >-
+              The postgres-backup CronJob has not completed successfully in over
+              26 hours.

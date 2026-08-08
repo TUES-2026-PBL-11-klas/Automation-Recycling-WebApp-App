@@ -1,12 +1,26 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { collectDefaultMetrics, Gauge, Registry } from 'prom-client';
+import { collectDefaultMetrics, Counter, Gauge, Registry } from 'prom-client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MetricsService implements OnModuleInit {
   readonly registry = new Registry();
 
+  // Email delivery outcomes. MailService swallowed failures into a log line, so
+  // sends could be failing for every customer with nothing to see it. This makes
+  // the failure rate a metric an alert can watch.
+  private readonly emails = new Counter({
+    name: 'ecorecycle_emails_total',
+    help: 'Emails by kind and outcome',
+    labelNames: ['kind', 'outcome'],
+    registers: [this.registry],
+  });
+
   constructor(private prisma: PrismaService) {}
+
+  recordEmail(kind: string, outcome: 'sent' | 'failed' | 'skipped') {
+    this.emails.inc({ kind, outcome });
+  }
 
   onModuleInit() {
     this.registry.setDefaultLabels({ app: 'ecorecycle-backend' });

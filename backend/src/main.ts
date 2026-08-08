@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
 
 // Comma-separated, so each environment declares its own origins. Never reflect
 // the request origin back: paired with credentials: true that would let any
@@ -19,7 +20,9 @@ function corsOrigins(): string[] {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // bufferLogs so startup lines also go through pino once it is resolved.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
 
   app.use(helmet());
   app.enableCors({ origin: corsOrigins(), credentials: true });
