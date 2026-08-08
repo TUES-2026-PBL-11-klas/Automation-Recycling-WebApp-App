@@ -154,6 +154,22 @@ describe('SchedulerService', () => {
         'c',
       ]);
     });
+
+    it('carries the small-item allowance across requests while packing', () => {
+      // Three phones each in three requests: 9 small items total, past the
+      // allowance of 5. The incremental pack must charge the same as scoring
+      // the whole set at once, not per request in isolation (where each would
+      // be under the allowance and count as zero volume).
+      const pool = [
+        req('a', [item(0.003, 0.9, 3, true)]),
+        req('b', [item(0.003, 0.9, 3, true)]),
+        req('c', [item(0.003, 0.9, 3, true)]),
+      ];
+      const packed = service.packRequests(pool, 7);
+      expect(packed).toHaveLength(3);
+      // 9 small items, 4 chargeable beyond the free 5, at 0.001 m3 each
+      expect(service.calcEffectiveVolume(packed)).toBeCloseTo(0.004);
+    });
   });
 
   describe('availability dates', () => {

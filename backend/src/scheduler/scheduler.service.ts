@@ -56,6 +56,18 @@ interface ScheduledRequest {
   }>;
 }
 
+// Accumulated volume and weight of a set of requests, kept incrementally.
+interface Load {
+  largeVol: number;
+  smallVol: number;
+  smallCount: number;
+  weight: number;
+}
+
+function emptyLoad(): Load {
+  return { largeVol: 0, smallVol: 0, smallCount: 0, weight: 0 };
+}
+
 interface OrsOptimizationResponse {
   routes: Array<{
     steps: Array<{ type: string; job: number }>;
@@ -79,38 +91,40 @@ export class SchedulerService {
     private mail: MailService,
   ) {}
 
+  // Running load accumulators, so a pack can add one request at a time instead
+  // of recomputing the whole route for every candidate.
+  private addRequestToLoad(load: Load, req: ScheduledRequest): void {
+    for (const item of req.items) {
+      load.weight += item.estimatedWeight ?? 0;
+      if (item.electronicsItem.isSmallItem) {
+        load.smallCount += item.quantity;
+        load.smallVol += item.estimatedVolume ?? 0;
+      } else {
+        load.largeVol += item.estimatedVolume ?? 0;
+      }
+    }
+  }
+
   // The first SMALL_ITEM_FREE small items ride along free. Only the units beyond
   // the allowance are charged — charging for all of them the moment the
   // allowance is passed made one extra phone add six phones' worth of volume,
   // which made packing depend on the order requests happened to be evaluated in.
+  private effectiveVolume(load: Load): number {
+    if (load.smallCount <= SMALL_ITEM_FREE) return load.largeVol;
+    const chargeableUnits = load.smallCount - SMALL_ITEM_FREE;
+    return load.largeVol + (load.smallVol / load.smallCount) * chargeableUnits;
+  }
+
   private calcEffectiveVolume(requests: ScheduledRequest[]): number {
-    let smallCount = 0;
-    let largeVol = 0;
-    let smallVol = 0;
-
-    for (const r of requests) {
-      for (const item of r.items) {
-        if (item.electronicsItem.isSmallItem) {
-          smallCount += item.quantity;
-          smallVol += item.estimatedVolume ?? 0;
-        } else {
-          largeVol += item.estimatedVolume ?? 0;
-        }
-      }
-    }
-
-    if (smallCount <= SMALL_ITEM_FREE) return largeVol;
-
-    const chargeableUnits = smallCount - SMALL_ITEM_FREE;
-    return largeVol + (smallVol / smallCount) * chargeableUnits;
+    const load = emptyLoad();
+    for (const r of requests) this.addRequestToLoad(load, r);
+    return this.effectiveVolume(load);
   }
 
   private calcTotalWeight(requests: ScheduledRequest[]): number {
-    let weight = 0;
-    for (const r of requests) {
-      for (const item of r.items) weight += item.estimatedWeight ?? 0;
-    }
-    return weight;
+    const load = emptyLoad();
+    for (const r of requests) this.addRequestToLoad(load, r);
+    return load.weight;
   }
 
   private getAddressString(req: ScheduledRequest): string {
@@ -198,27 +212,35 @@ export class SchedulerService {
   }
 
   // Build a list of requests that fits within both a volume and a weight cap,
-  // preserving pool order so earlier requests are served first.
+  // preserving pool order so earlier requests are served first. Single pass: the
+  // running load is trial-extended per candidate rather than the whole route
+  // being recomputed each time.
   private packRequests(
     pool: ScheduledRequest[],
     volumeCap: number,
     existing: ScheduledRequest[] = [],
   ): ScheduledRequest[] {
-    const packed: ScheduledRequest[] = [...existing];
-    const seen = new Set(packed.map((r) => r.id));
+    const added: ScheduledRequest[] = [];
+    const seen = new Set(existing.map((r) => r.id));
+
+    const load = emptyLoad();
+    for (const r of existing) this.addRequestToLoad(load, r);
 
     for (const req of pool) {
       if (seen.has(req.id)) continue;
-      const candidate = [...packed, req];
+
+      const trial = { ...load };
+      this.addRequestToLoad(trial, req);
       if (
-        this.calcEffectiveVolume(candidate) <= volumeCap &&
-        this.calcTotalWeight(candidate) <= TRUCK_WEIGHT
+        this.effectiveVolume(trial) <= volumeCap &&
+        trial.weight <= TRUCK_WEIGHT
       ) {
-        packed.push(req);
+        Object.assign(load, trial);
         seen.add(req.id);
+        added.push(req);
       }
     }
-    return packed.slice(existing.length);
+    return added;
   }
 
   // Returns true if request has no slots (always available) or has a slot for the given date
