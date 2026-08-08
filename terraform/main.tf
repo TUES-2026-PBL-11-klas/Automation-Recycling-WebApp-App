@@ -36,6 +36,7 @@ resource "helm_release" "argocd" {
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
   version    = var.argocd_version
+  timeout    = 900
 
   # Expose ArgoCD UI via NodePort so it's reachable from the host machine
   set {
@@ -65,6 +66,10 @@ resource "helm_release" "prometheus_stack" {
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   version    = var.prometheus_stack_version
+
+  # Pulling the operator, Prometheus, Grafana, Alertmanager, node-exporter and
+  # kube-state-metrics images exceeds the 300s default on a cold image cache.
+  timeout = 900
 
   values = [file("${path.module}/../monitoring/prometheus-values.yaml")]
 
@@ -101,6 +106,7 @@ resource "helm_release" "loki" {
   repository = "https://grafana.github.io/helm-charts"
   chart      = "loki-stack"
   version    = var.loki_stack_version
+  timeout    = 900
 
   # Promtail ships logs from every pod to Loki
   set {
@@ -110,6 +116,14 @@ resource "helm_release" "loki" {
 
   set {
     name  = "grafana.enabled"
+    value = "false"
+  }
+
+  # loki-stack ships its own Grafana datasource ConfigMap marked isDefault=true,
+  # which collides with the Prometheus default and stops Grafana from starting.
+  # The Loki datasource comes from monitoring/prometheus-values.yaml instead.
+  set {
+    name  = "grafana.sidecar.datasources.enabled"
     value = "false"
   }
 
