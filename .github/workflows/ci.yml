@@ -32,6 +32,12 @@ jobs:
         run: npm test
         working-directory: backend
 
+      # Fails the build on a known high/critical advisory, so a vulnerable
+      # dependency cannot land unnoticed the way 17 of them already had.
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+        working-directory: backend
+
   # ── Frontend: Lint + Build ─────────────────────────────────────────────────
   frontend-ci:
     name: Frontend — Lint & Build
@@ -55,6 +61,10 @@ jobs:
 
       - name: Build
         run: npm run build
+        working-directory: frontend
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
         working-directory: frontend
 
   # ── Docker Build + Push (main branch only) ─────────────────────────────────
@@ -101,6 +111,25 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/recycling-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Scan the images that were just pushed. ignore-unfixed keeps the gate on
+      # advisories that actually have a fix available, so an unpatched base-image
+      # OS CVE does not block every deploy; HIGH and CRITICAL with a fix do.
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/recycling-backend:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/recycling-frontend:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
       # Update k8s manifests so ArgoCD picks up the new image
       - name: Update image tags in k8s manifests
