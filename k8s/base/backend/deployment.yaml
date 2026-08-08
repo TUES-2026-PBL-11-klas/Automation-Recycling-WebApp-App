@@ -17,6 +17,28 @@ spec:
         prometheus.io/port: "4000"
         prometheus.io/path: "/metrics"
     spec:
+      # migrate deploy is idempotent, so running it on every rollout is safe and
+      # keeps the schema in step with the image being deployed. A failure here
+      # (database not up yet) retries with backoff and blocks the app starting
+      # against a schema it does not match.
+      initContainers:
+        - name: migrate
+          image: boqnbabanin/recycling-backend:6e460305837f8e1bd630a79025faaa0c4e191f04
+          imagePullPolicy: IfNotPresent
+          command: ["npx", "prisma", "migrate", "deploy"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: database-url
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
       containers:
         - name: backend
 
