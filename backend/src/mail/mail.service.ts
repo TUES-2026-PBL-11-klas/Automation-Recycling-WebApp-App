@@ -4,7 +4,12 @@ import { Resend } from 'resend';
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly resend = new Resend(process.env.RESEND_API_KEY);
+  // The Resend constructor throws on a missing key. Notifications are not
+  // essential to serving the API, so run without them rather than refusing
+  // to boot when the key is absent.
+  private readonly resend = process.env.RESEND_API_KEY
+    ? new Resend(process.env.RESEND_API_KEY)
+    : null;
   private readonly from =
     process.env.FROM_EMAIL ?? 'EcoRecycle <noreply@ecorecycle.bg>';
 
@@ -29,6 +34,13 @@ export class MailService {
       data.timeFrom && data.timeTo
         ? `<p>Времеви прозорец: <strong>${data.timeFrom} – ${data.timeTo}</strong></p>`
         : '';
+
+    if (!this.resend) {
+      this.logger.warn(
+        `RESEND_API_KEY not set — skipped confirmation to ${to}`,
+      );
+      return;
+    }
 
     try {
       await this.resend.emails.send({
@@ -75,6 +87,13 @@ export class MailService {
         ? `<p>Времеви прозорец: <strong>${data.timeFrom} – ${data.timeTo}</strong></p>`
         : '';
 
+    if (!this.resend) {
+      this.logger.warn(
+        `RESEND_API_KEY not set — skipped reserve activation to ${to}`,
+      );
+      return;
+    }
+
     try {
       await this.resend.emails.send({
         from: this.from,
@@ -101,6 +120,13 @@ export class MailService {
     to: string,
     data: { name: string; requestId: string },
   ) {
+    if (!this.resend) {
+      this.logger.warn(
+        `RESEND_API_KEY not set — skipped cancellation notice to ${to}`,
+      );
+      return;
+    }
+
     try {
       await this.resend.emails.send({
         from: this.from,
