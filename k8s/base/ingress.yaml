@@ -12,13 +12,10 @@ spec:
     - host: recycling.local
       http:
         paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: backend
-                port:
-                  number: 4000
+          # No /api rule: the frontend serves /api on its own origin and proxies
+          # to the backend service. Routing /api straight to the backend here
+          # would skip that proxy and arrive with the prefix still attached,
+          # which the API does not serve.
           - path: /
             pathType: Prefix
             backend:

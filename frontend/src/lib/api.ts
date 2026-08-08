@@ -1,4 +1,7 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Relative by default: the page's own origin serves /api and next.config.ts
+// forwards it to the backend, so this works unchanged in development, in a
+// container, and behind an ingress without anything being baked in at build time.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
 const base: RequestInit = {
   credentials: 'include',

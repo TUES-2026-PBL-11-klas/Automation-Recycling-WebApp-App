@@ -21,7 +21,11 @@ spec:
           ports:
             - containerPort: 3000
           env:
-            - name: NEXT_PUBLIC_API_URL
+            # Read by next.config.ts at server start, not inlined at build time,
+            # so this image can be pointed at any backend. Cluster-internal DNS
+            # is correct here because the Next server makes this call, not the
+            # browser.
+            - name: BACKEND_ORIGIN
               value: http://backend:4000
           resources:
             requests:

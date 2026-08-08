@@ -37,7 +37,9 @@ services:
       context: ./frontend
       target: builder
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:4000
+      # The browser calls /api on the frontend's own origin; this is where the
+      # frontend server forwards it, so it uses the compose service name.
+      BACKEND_ORIGIN: http://backend:4000
     ports:
       - "3000:3000"
     depends_on:
