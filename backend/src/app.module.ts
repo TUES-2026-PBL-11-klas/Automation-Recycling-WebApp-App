@@ -12,6 +12,7 @@ import { PickupRequestsModule } from './pickup-requests/pickup-requests.module';
 import { AdminModule } from './admin/admin.module';
 import { MailModule } from './mail/mail.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     MailModule,
     SchedulerModule,
     AdminModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
