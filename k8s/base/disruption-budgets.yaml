@@ -1,0 +1,24 @@
+# Keep at least one pod of each stateless service serving during a voluntary
+# disruption — a node drain for maintenance, an autoscaler scale-down. Without
+# these a drain can take a whole service down even with two replicas.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend-pdb
+  namespace: recycling-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: backend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: recycling-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: frontend

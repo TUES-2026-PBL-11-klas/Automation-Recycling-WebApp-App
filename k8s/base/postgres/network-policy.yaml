@@ -1,0 +1,27 @@
+# Restrict who can reach PostgreSQL. Without this any compromised pod anywhere
+# in the cluster can open a connection to port 5432 directly. This limits
+# ingress to pods in the recycling-app namespace — the backend and the backup
+# job — and blocks every other namespace.
+#
+# Enforcement requires a CNI that implements NetworkPolicy (Calico, Cilium).
+# minikube's default bridge CNI does not enforce it, so on minikube this is
+# declarative intent that a real cluster honours; it never blocks traffic here.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-allow-recycling-app
+  namespace: recycling-app
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: recycling-app
+      ports:
+        - protocol: TCP
+          port: 5432

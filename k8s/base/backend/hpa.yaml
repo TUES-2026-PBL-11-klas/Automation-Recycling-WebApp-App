@@ -1,0 +1,22 @@
+# Scale the backend on CPU so a spike in bookings or a scheduler run does not
+# have to be absorbed by a fixed pod count. The floor stays at the deployment's
+# two replicas for availability.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend
+  namespace: recycling-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
