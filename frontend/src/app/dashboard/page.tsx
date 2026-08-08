@@ -9,6 +9,7 @@ import {
   Package, CalendarDays, MapPin, ChevronRight, Inbox, Filter, Home, Loader2,
 } from 'lucide-react';
 import { getMyRequests, logoutUser } from '@/lib/api';
+import type { PickupRequest, RequestItem } from '@/lib/types';
 
 type RequestStatus = 'PENDING' | 'CONFIRMED' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
 
@@ -43,12 +44,12 @@ export default function DashboardPage() {
     onSuccess: () => router.push('/'),
   });
 
-  const filtered = filter === 'all' ? requests : requests.filter((r: any) => r.status === filter);
+  const filtered = filter === 'all' ? requests : requests.filter((r: PickupRequest) => r.status === filter);
 
   const stats = {
     total: requests.length,
-    active: requests.filter((r: any) => ['PENDING', 'CONFIRMED', 'IN_TRANSIT'].includes(r.status)).length,
-    completed: requests.filter((r: any) => r.status === 'COMPLETED').length,
+    active: requests.filter((r: PickupRequest) => ['PENDING', 'CONFIRMED', 'IN_TRANSIT'].includes(r.status)).length,
+    completed: requests.filter((r: PickupRequest) => r.status === 'COMPLETED').length,
   };
 
   return (
@@ -145,10 +146,10 @@ export default function DashboardPage() {
               </p>
             </div>
           ) : (
-            filtered.map((request: any) => {
+            filtered.map((request: PickupRequest) => {
               const status = statusConfig[request.status as RequestStatus];
               const StatusIcon = status.icon;
-              const itemsCount = request.items?.reduce((s: number, i: any) => s + i.quantity, 0) ?? 0;
+              const itemsCount = request.items?.reduce((s: number, i: RequestItem) => s + i.quantity, 0) ?? 0;
 
               return (
                 <Link key={request.id} href={`/dashboard/${request.id}`} className="glass-card rounded-2xl p-6 hover:-translate-y-0.5 transition-all duration-300 group block">

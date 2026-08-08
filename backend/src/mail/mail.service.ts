@@ -5,21 +5,30 @@ import { Resend } from 'resend';
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private readonly resend = new Resend(process.env.RESEND_API_KEY);
-  private readonly from = process.env.FROM_EMAIL ?? 'EcoRecycle <noreply@ecorecycle.bg>';
+  private readonly from =
+    process.env.FROM_EMAIL ?? 'EcoRecycle <noreply@ecorecycle.bg>';
 
-  async sendPickupConfirmation(to: string, data: {
-    name: string;
-    requestId: string;
-    address: string;
-    scheduledDate: Date;
-    timeFrom?: string | null;
-    timeTo?: string | null;
-  }) {
+  async sendPickupConfirmation(
+    to: string,
+    data: {
+      name: string;
+      requestId: string;
+      address: string;
+      scheduledDate: Date;
+      timeFrom?: string | null;
+      timeTo?: string | null;
+    },
+  ) {
     const dateStr = data.scheduledDate.toLocaleDateString('bg-BG', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
     });
-    const timeRow = data.timeFrom && data.timeTo
-      ? `<p>Времеви прозорец: <strong>${data.timeFrom} – ${data.timeTo}</strong></p>` : '';
+    const timeRow =
+      data.timeFrom && data.timeTo
+        ? `<p>Времеви прозорец: <strong>${data.timeFrom} – ${data.timeTo}</strong></p>`
+        : '';
 
     try {
       await this.resend.emails.send({
@@ -44,19 +53,27 @@ export class MailService {
     }
   }
 
-  async sendReserveActivated(to: string, data: {
-    name: string;
-    requestId: string;
-    address: string;
-    scheduledDate: Date;
-    timeFrom?: string | null;
-    timeTo?: string | null;
-  }) {
+  async sendReserveActivated(
+    to: string,
+    data: {
+      name: string;
+      requestId: string;
+      address: string;
+      scheduledDate: Date;
+      timeFrom?: string | null;
+      timeTo?: string | null;
+    },
+  ) {
     const dateStr = data.scheduledDate.toLocaleDateString('bg-BG', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
     });
-    const timeRow = data.timeFrom && data.timeTo
-      ? `<p>Времеви прозорец: <strong>${data.timeFrom} – ${data.timeTo}</strong></p>` : '';
+    const timeRow =
+      data.timeFrom && data.timeTo
+        ? `<p>Времеви прозорец: <strong>${data.timeFrom} – ${data.timeTo}</strong></p>`
+        : '';
 
     try {
       await this.resend.emails.send({
@@ -80,7 +97,10 @@ export class MailService {
     }
   }
 
-  async sendCancellationNotice(to: string, data: { name: string; requestId: string }) {
+  async sendCancellationNotice(
+    to: string,
+    data: { name: string; requestId: string },
+  ) {
     try {
       await this.resend.emails.send({
         from: this.from,

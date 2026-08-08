@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Uspeshniq/Automation-Recycling-WebApp-App.git
+    repoURL: https://github.com/TUES-2026-PBL-11-klas/Automation-Recycling-WebApp-App.git
     targetRevision: main
     path: k8s/base
   destination:

@@ -1,11 +1,25 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { RequestStatus, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { AdminService } from './admin.service';
 import { SchedulerService } from '../scheduler/scheduler.service';
-import { AdminUpdateRequestDto, AdminScheduleRouteDto } from './dto/admin-update-request.dto';
+import {
+  AdminUpdateRequestDto,
+  AdminScheduleRouteDto,
+} from './dto/admin-update-request.dto';
 import { AdminCreatePickupRequestDto } from '../pickup-requests/dto/create-pickup-request.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -26,7 +40,10 @@ export class AdminController {
   }
 
   @Post('requests')
-  createForUser(@Req() req: any, @Body() dto: AdminCreatePickupRequestDto) {
+  createForUser(
+    @Req() req: { user: { userId: string } },
+    @Body() dto: AdminCreatePickupRequestDto,
+  ) {
     return this.adminService.createForUser(req.user.userId, dto);
   }
 

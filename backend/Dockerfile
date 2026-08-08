@@ -23,4 +23,4 @@ COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 USER nestjs
 EXPOSE 4000
 
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]

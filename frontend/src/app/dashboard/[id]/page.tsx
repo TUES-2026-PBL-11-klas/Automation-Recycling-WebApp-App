@@ -9,6 +9,7 @@ import {
   Truck, XCircle, Recycle, Scale, Loader2, Calendar, StickyNote,
 } from 'lucide-react';
 import { getRequest, cancelRequest } from '@/lib/api';
+import type { RequestItem, AvailabilityPreference, AvailabilitySlot } from '@/lib/types';
 
 type RequestStatus = 'PENDING' | 'CONFIRMED' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
 
@@ -65,7 +66,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   const st = statusConfig[request.status as RequestStatus];
   const StatusIcon = st.icon;
-  const totalItems = request.items?.reduce((s: number, i: any) => s + i.quantity, 0) ?? 0;
+  const totalItems = request.items?.reduce((s: number, i: RequestItem) => s + i.quantity, 0) ?? 0;
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -164,7 +165,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              {request.items?.map((item: any) => (
+              {request.items?.map((item: RequestItem) => (
                 <div key={item.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl border border-border/30">
                   <div>
                     <p className="text-white text-sm font-medium">{item.electronicsItem?.name}</p>
@@ -187,7 +188,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 <h2 className="text-white font-semibold">Предпочитания за наличност</h2>
               </div>
               <div className="flex flex-wrap gap-2">
-                {request.availabilityPreferences.map((pref: any) => (
+                {request.availabilityPreferences.map((pref: AvailabilityPreference) => (
                   <span key={pref.id} className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-sm">
                     {prefLabels[pref.preferenceType] ?? pref.preferenceType}
                     {pref.value && ` — ${pref.value}`}
@@ -205,7 +206,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 <h2 className="text-white font-semibold">Конкретни дати за наличност</h2>
               </div>
               <div className="flex flex-col gap-2">
-                {request.availabilitySlots.map((slot: any) => (
+                {request.availabilitySlots.map((slot: AvailabilitySlot) => (
                   <div key={slot.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl border border-border/30 text-sm">
                     <span className="text-white">{new Date(slot.availableDate).toLocaleDateString('bg-BG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                     <span className="text-muted-foreground">{slot.timeFrom} – {slot.timeTo}</span>

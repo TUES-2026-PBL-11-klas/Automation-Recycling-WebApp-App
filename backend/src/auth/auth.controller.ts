@@ -1,23 +1,40 @@
-import { Controller, Post, Get, Body, Req, Res, HttpCode, HttpStatus, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Req,
+  Res,
+  HttpCode,
+  HttpStatus,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { Prisma } from '@prisma/client';
+
+type AuthUser = { userId: string; email: string; role: string };
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() body: any) {
+  async register(@Body() body: Prisma.UserCreateInput) {
     return this.authService.register(body);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() body: { email: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) throw new UnauthorizedException('Invalid credentials');
-    const result = await this.authService.login(user);
+    const result = this.authService.login(user);
     res.cookie('access_token', result.access_token, {
       httpOnly: true,
       sameSite: 'lax',
@@ -28,14 +45,14 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
+  logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
     return { message: 'Logged out' };
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  getMe(@Req() req: any) {
+  getMe(@Req() req: { user: AuthUser }) {
     return req.user;
   }
 }
