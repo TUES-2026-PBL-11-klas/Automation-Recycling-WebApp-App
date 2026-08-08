@@ -1,8 +1,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { utcDateKey, utcDayFromToday } from './date-key';
 
 const TRUCK_VOLUME = 7; // m³ total truck capacity
+// Payload of a 3.5 t van. Volume alone does not keep a load legal: 15 washing
+// machines are only 5.25 m³ but over a tonne. Should come from the Vehicle
+// assigned to the route once vehicles are actually allocated.
+const TRUCK_WEIGHT = 1000; // kg maximum payload
 const TARGET_RATIO = 0.8; // aim for 80% fill
 const RESERVE_RATIO = 0.2; // 20% reserved in case of cancellations
 const UNDERLOAD_MIN = 0.75; // below this after 7 days = underload
@@ -30,6 +35,7 @@ interface ScheduledRequest {
   items: Array<{
     quantity: number;
     estimatedVolume: number | null;
+    estimatedWeight: number | null;
     electronicsItem: { isSmallItem: boolean };
   }>;
   address: {
@@ -73,7 +79,10 @@ export class SchedulerService {
     private mail: MailService,
   ) {}
 
-  // Small items (isSmallItem=true) only add volume once there are more than SMALL_ITEM_FREE of them
+  // The first SMALL_ITEM_FREE small items ride along free. Only the units beyond
+  // the allowance are charged — charging for all of them the moment the
+  // allowance is passed made one extra phone add six phones' worth of volume,
+  // which made packing depend on the order requests happened to be evaluated in.
   private calcEffectiveVolume(requests: ScheduledRequest[]): number {
     let smallCount = 0;
     let largeVol = 0;
@@ -90,17 +99,18 @@ export class SchedulerService {
       }
     }
 
-    return largeVol + (smallCount > SMALL_ITEM_FREE ? smallVol : 0);
+    if (smallCount <= SMALL_ITEM_FREE) return largeVol;
+
+    const chargeableUnits = smallCount - SMALL_ITEM_FREE;
+    return largeVol + (smallVol / smallCount) * chargeableUnits;
   }
 
-  private marginalVolume(
-    existing: ScheduledRequest[],
-    candidate: ScheduledRequest,
-  ): number {
-    return (
-      this.calcEffectiveVolume([...existing, candidate]) -
-      this.calcEffectiveVolume(existing)
-    );
+  private calcTotalWeight(requests: ScheduledRequest[]): number {
+    let weight = 0;
+    for (const r of requests) {
+      for (const item of r.items) weight += item.estimatedWeight ?? 0;
+    }
+    return weight;
   }
 
   private getAddressString(req: ScheduledRequest): string {
@@ -187,18 +197,25 @@ export class SchedulerService {
     }
   }
 
-  // Build a list of requests that fits within a volume cap, preserving order
+  // Build a list of requests that fits within both a volume and a weight cap,
+  // preserving pool order so earlier requests are served first.
   private packRequests(
     pool: ScheduledRequest[],
     volumeCap: number,
     existing: ScheduledRequest[] = [],
   ): ScheduledRequest[] {
     const packed: ScheduledRequest[] = [...existing];
+    const seen = new Set(packed.map((r) => r.id));
+
     for (const req of pool) {
-      if (packed.find((r) => r.id === req.id)) continue;
-      const marginal = this.marginalVolume(packed, req);
-      if (this.calcEffectiveVolume(packed) + marginal <= volumeCap) {
+      if (seen.has(req.id)) continue;
+      const candidate = [...packed, req];
+      if (
+        this.calcEffectiveVolume(candidate) <= volumeCap &&
+        this.calcTotalWeight(candidate) <= TRUCK_WEIGHT
+      ) {
         packed.push(req);
+        seen.add(req.id);
       }
     }
     return packed.slice(existing.length);
@@ -207,9 +224,9 @@ export class SchedulerService {
   // Returns true if request has no slots (always available) or has a slot for the given date
   private isAvailableOn(req: ScheduledRequest, date: Date): boolean {
     if (!req.availabilitySlots?.length) return true;
-    const target = date.toISOString().slice(0, 10);
+    const target = utcDateKey(date);
     return req.availabilitySlots.some(
-      (s) => new Date(s.availableDate).toISOString().slice(0, 10) === target,
+      (s) => utcDateKey(new Date(s.availableDate)) === target,
     );
   }
 
@@ -219,9 +236,9 @@ export class SchedulerService {
     date: Date,
   ): { from: string; to: string } | null {
     if (!req.availabilitySlots?.length) return null;
-    const target = date.toISOString().slice(0, 10);
+    const target = utcDateKey(date);
     const slot = req.availabilitySlots.find(
-      (s) => new Date(s.availableDate).toISOString().slice(0, 10) === target,
+      (s) => utcDateKey(new Date(s.availableDate)) === target,
     );
     if (!slot || slot.isFlexible) return null;
     return { from: slot.timeFrom, to: slot.timeTo };
@@ -230,17 +247,13 @@ export class SchedulerService {
   // Finds the date in the next 14 days that has the most requests available
   private findBestRouteDate(requests: ScheduledRequest[]): Date {
     const hasAnySlots = requests.some((r) => r.availabilitySlots?.length > 0);
-    const fallback = new Date();
-    fallback.setHours(12, 0, 0, 0);
-    fallback.setDate(fallback.getDate() + WAIT_DAYS);
+    const fallback = utcDayFromToday(WAIT_DAYS);
     if (!hasAnySlots) return fallback;
 
     let bestDate = fallback;
     let bestCount = -1;
     for (let i = 1; i <= 14; i++) {
-      const d = new Date();
-      d.setHours(12, 0, 0, 0);
-      d.setDate(d.getDate() + i);
+      const d = utcDayFromToday(i);
       const count = requests.filter((r) => this.isAvailableOn(r, d)).length;
       if (count > bestCount) {
         bestCount = count;

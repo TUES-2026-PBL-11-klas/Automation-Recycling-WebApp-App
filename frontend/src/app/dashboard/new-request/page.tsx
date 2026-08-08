@@ -21,8 +21,13 @@ for (let h = 7; h <= 22; h++) {
   if (h < 22) TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:30`);
 }
 
+// Built from local parts, never toISOString(): these Dates are local midnight,
+// and at any positive UTC offset toISOString() reports the previous day — which
+// silently shifted every customer's availability back by one.
 function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
 }
 
 function getNext14Days(): Date[] {
@@ -122,7 +127,9 @@ export default function NewRequestPage() {
         const from = ov?.from || globalFrom;
         const to = ov?.to || globalTo;
         return {
-          availableDate: d.toISOString(),
+          // A calendar date, not an instant — the server parses this as UTC
+          // midnight so no timezone is involved on either side.
+          availableDate: key,
           timeFrom: from || '08:00',
           timeTo: to || '20:00',
           isFlexible: !from && !to,
