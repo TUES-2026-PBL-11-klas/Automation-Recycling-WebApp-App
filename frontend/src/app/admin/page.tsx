@@ -6,13 +6,31 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Recycle, LogOut, Users, Package, Clock, CheckCircle2, Truck, XCircle,
   Trash2, CalendarDays, Filter, Loader2, MapPin, Home, Route, X, Check,
+  Sparkles, Hourglass, Mail, AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
   adminGetRequests, adminUpdateRequest, adminDeleteRequest,
-  adminGetDistricts, adminScheduleRoute, logoutUser,
+  adminGetDistricts, adminScheduleRoute, adminRunScheduler, logoutUser,
 } from '@/lib/api';
-import type { District, PickupRequest, RequestItem, RouteResult, RouteStop } from '@/lib/types';
+import type {
+  District, PickupRequest, RequestItem, RouteResult, RouteStop,
+  SchedulerResult, SchedulerStatus,
+} from '@/lib/types';
+
+// Mirrors the constants the scheduler packs against, so the UI can show how
+// close a district is to being worth a truck.
+const TRUCK_VOLUME = 7;
+const UNDERLOAD_MIN = 0.75;
+const REQUIRED_VOLUME = TRUCK_VOLUME * UNDERLOAD_MIN;
+
+const schedulerConfig: Record<SchedulerStatus, { label: string; hint: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
+  ROUTE_CREATED:    { label: 'Маршрутът е създаден',   hint: 'Достигнат е достатъчен обем и заявките са групирани.',        color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-400/20', icon: Check },
+  EMAILS_SENT:      { label: 'Изпратени известия',      hint: 'Маршрутът е финализиран, редът на спирките е оптимизиран.',  color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-400/20', icon: Mail },
+  WAITING:          { label: 'Изчакване',               hint: 'Обемът все още не оправдава курс на камиона.',               color: 'text-amber-400',   bg: 'bg-amber-400/10',   border: 'border-amber-400/20',   icon: Hourglass },
+  WAITING_EXTENDED: { label: 'Удължено изчакване',      hint: 'Търсени са заявки и от съседни квартали.',                   color: 'text-amber-400',   bg: 'bg-amber-400/10',   border: 'border-amber-400/20',   icon: Hourglass },
+  IN_PROGRESS:      { label: 'Маршрут в процес',        hint: 'Има отворен маршрут, който още се попълва.',                 color: 'text-blue-400',    bg: 'bg-blue-400/10',    border: 'border-blue-400/20',    icon: Truck },
+};
 
 type RequestStatus = 'PENDING' | 'CONFIRMED' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
 
@@ -46,6 +64,11 @@ export default function AdminPage() {
   const [routeDate, setRouteDate] = useState('');
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
 
+  // Automatic scheduler modal
+  const [showAutoModal, setShowAutoModal] = useState(false);
+  const [autoDistrictId, setAutoDistrictId] = useState('');
+  const [autoResult, setAutoResult] = useState<SchedulerResult | null>(null);
+
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['adminRequests', statusFilter, districtFilter],
     queryFn: () => adminGetRequests({ status: statusFilter || undefined, districtId: districtFilter || undefined }),
@@ -67,6 +90,14 @@ export default function AdminPage() {
     mutationFn: adminScheduleRoute,
     onSuccess: (data) => {
       setRouteResult(data);
+      queryClient.invalidateQueries({ queryKey: ['adminRequests'] });
+    },
+  });
+
+  const autoMutation = useMutation({
+    mutationFn: adminRunScheduler,
+    onSuccess: (data: SchedulerResult) => {
+      setAutoResult(data);
       queryClient.invalidateQueries({ queryKey: ['adminRequests'] });
     },
   });
@@ -95,9 +126,127 @@ export default function AdminPage() {
 
   const closeRouteModal = () => { setShowRouteModal(false); setRouteResult(null); setRouteDistrictId(''); setRouteDate(''); };
 
+  const handleRunScheduler = () => {
+    if (!autoDistrictId) return;
+    setAutoResult(null);
+    autoMutation.mutate(autoDistrictId);
+  };
+
+  const closeAutoModal = () => { setShowAutoModal(false); setAutoResult(null); setAutoDistrictId(''); };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[140px] pointer-events-none" />
+
+      {/* Automatic Scheduler Modal */}
+      {showAutoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeAutoModal} />
+          <div className="relative z-10 w-full max-w-md glass-card rounded-3xl p-8 animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/15 rounded-xl flex items-center justify-center">
+                  <Sparkles size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-lg">Автоматично Планиране</h2>
+                  <p className="text-muted-foreground text-xs">Алгоритъмът решава дали курсът си струва</p>
+                </div>
+              </div>
+              <button onClick={closeAutoModal} className="text-muted-foreground hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {autoResult ? (() => {
+              const cfg = schedulerConfig[autoResult.status];
+              const Icon = cfg?.icon ?? AlertTriangle;
+              const vol = autoResult.currentVol;
+              const pct = vol !== undefined ? Math.min(100, (vol / REQUIRED_VOLUME) * 100) : null;
+              return (
+                <div className="flex flex-col gap-4">
+                  <div className={`p-4 ${cfg?.bg ?? 'bg-secondary/30'} border ${cfg?.border ?? 'border-border/40'} rounded-xl flex items-start gap-3`}>
+                    <Icon size={18} className={`${cfg?.color ?? 'text-white'} flex-shrink-0 mt-0.5`} />
+                    <div>
+                      <p className={`${cfg?.color ?? 'text-white'} font-semibold text-sm`}>{cfg?.label ?? autoResult.status}</p>
+                      <p className="text-muted-foreground text-xs mt-1">{cfg?.hint ?? ''}</p>
+                    </div>
+                  </div>
+
+                  {autoResult.status === 'ROUTE_CREATED' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-secondary/30 rounded-xl border border-border/30">
+                        <p className="text-xs text-muted-foreground">Основни спирки</p>
+                        <p className="text-xl font-bold text-white">{autoResult.mainCount ?? 0}</p>
+                      </div>
+                      <div className="p-3 bg-secondary/30 rounded-xl border border-border/30">
+                        <p className="text-xs text-muted-foreground">Резервни</p>
+                        <p className="text-xl font-bold text-white">{autoResult.reserveCount ?? 0}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {autoResult.status === 'EMAILS_SENT' && (
+                    <div className="p-3 bg-secondary/30 rounded-xl border border-border/30">
+                      <p className="text-xs text-muted-foreground">Уведомени клиенти</p>
+                      <p className="text-xl font-bold text-white">{autoResult.count ?? 0}</p>
+                    </div>
+                  )}
+
+                  {/* How close the district is to justifying a truck */}
+                  {pct !== null && (
+                    <div className="p-3 bg-secondary/30 rounded-xl border border-border/30">
+                      <div className="flex items-baseline justify-between mb-2">
+                        <p className="text-xs text-muted-foreground">Натрупан обем</p>
+                        <p className="text-xs text-white font-medium">
+                          {vol?.toFixed(2)} / {REQUIRED_VOLUME.toFixed(2)} м³
+                        </p>
+                      </div>
+                      <div className="h-2 bg-secondary/60 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/70 mt-2">
+                        Камионът тръгва при {Math.round(UNDERLOAD_MIN * 100)}% от {TRUCK_VOLUME} м³.
+                      </p>
+                    </div>
+                  )}
+
+                  <button onClick={closeAutoModal} className="w-full py-3 bg-primary/20 text-primary border border-primary/30 rounded-xl font-medium hover:bg-primary/30 transition-colors">
+                    Затвори
+                  </button>
+                </div>
+              );
+            })() : (
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Квартал *</label>
+                  <select value={autoDistrictId} onChange={(e) => setAutoDistrictId(e.target.value)}
+                    className="w-full bg-secondary/50 border border-border rounded-xl py-3 px-4 text-white focus:outline-none focus:border-primary transition-all">
+                    <option value="">Изберете квартал</option>
+                    {districts.map((d: District) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-3 bg-secondary/30 rounded-xl border border-border/40 text-xs text-muted-foreground">
+                  Алгоритъмът групира <span className="text-blue-400 font-medium">Потвърдените</span> заявки, изчислява обема (малките уреди се броят чак след 5 бр.), избира най-подходящата дата и заделя <span className="text-white font-medium">20%</span> резерв. Ако обемът е под {Math.round(UNDERLOAD_MIN * 100)}%, изчаква и търси заявки от съседни квартали.
+                </div>
+
+                {autoMutation.isError && (
+                  <p className="text-red-400 text-sm">{(autoMutation.error as Error).message}</p>
+                )}
+
+                <button onClick={handleRunScheduler} disabled={!autoDistrictId || autoMutation.isPending}
+                  className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  {autoMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                  {autoMutation.isPending ? 'Изчисляване...' : 'Стартирай Алгоритъма'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Schedule Route Modal */}
       {showRouteModal && (
@@ -209,10 +358,16 @@ export default function AdminPage() {
             </h1>
             <p className="text-muted-foreground text-lg">Управлявайте всички заявки за рециклиране.</p>
           </div>
-          <button onClick={() => setShowRouteModal(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-accent/15 text-accent border border-accent/30 font-semibold rounded-xl hover:bg-accent/25 hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap self-start sm:self-auto">
-            <Route size={18} /> Насрочи Маршрут
-          </button>
+          <div className="flex flex-wrap gap-3 self-start sm:self-auto">
+            <button onClick={() => setShowAutoModal(true)}
+              className="flex items-center gap-2 px-5 py-3 bg-primary/15 text-primary border border-primary/30 font-semibold rounded-xl hover:bg-primary/25 hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap">
+              <Sparkles size={18} /> Автоматично Планиране
+            </button>
+            <button onClick={() => setShowRouteModal(true)}
+              className="flex items-center gap-2 px-5 py-3 bg-accent/15 text-accent border border-accent/30 font-semibold rounded-xl hover:bg-accent/25 hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap">
+              <Route size={18} /> Насрочи Маршрут
+            </button>
+          </div>
         </div>
 
         {/* Stats */}

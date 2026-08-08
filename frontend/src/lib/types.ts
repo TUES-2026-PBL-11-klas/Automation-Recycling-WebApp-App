@@ -65,3 +65,23 @@ export interface RouteResult {
   stops?: RouteStop[];
   totalEstimatedWeight?: number;
 }
+
+export type SchedulerStatus =
+  | 'ROUTE_CREATED'
+  | 'WAITING'
+  | 'WAITING_EXTENDED'
+  | 'IN_PROGRESS'
+  | 'EMAILS_SENT';
+
+// Shape returned by POST /admin/scheduler/run/:districtId. Which fields are
+// present depends on the branch the algorithm took.
+export interface SchedulerResult {
+  status: SchedulerStatus;
+  message?: string;
+  currentVol?: number;
+  routeId?: string;
+  mainCount?: number;
+  reserveCount?: number;
+  count?: number;
+  routeAgeDays?: number;
+}

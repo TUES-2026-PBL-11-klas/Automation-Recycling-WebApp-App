@@ -90,3 +90,13 @@ export async function adminGetDistricts() {
 export async function adminScheduleRoute(data: { districtId: string; routeDate: string; vehicleId?: string; teamId?: string }) {
   return handle(await fetch(`${API_URL}/admin/routes/schedule`, { ...base, method: 'POST', body: JSON.stringify(data) }));
 }
+
+// Runs the capacity-aware scheduler: packs a truck to its target fill, builds a
+// reserve list, falls back to neighbouring districts, and optimises stop order.
+export async function adminRunScheduler(districtId: string) {
+  return handle(await fetch(`${API_URL}/admin/scheduler/run/${districtId}`, { ...base, method: 'POST' }));
+}
+
+export async function adminCancelStop(routeId: string, requestId: string) {
+  return handle(await fetch(`${API_URL}/admin/routes/${routeId}/cancel-stop/${requestId}`, { ...base, method: 'POST' }));
+}
