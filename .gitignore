@@ -1,0 +1,7 @@
+# Terraform state can contain secret material and must not be committed. Use a
+# remote backend with locking instead; keep only the lockfile in version control.
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfstate.backup
+terraform/.terraform.tfstate.lock.info

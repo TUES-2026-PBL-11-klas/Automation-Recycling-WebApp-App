@@ -96,11 +96,11 @@ export class MailService {
         subject: 'Потвърждение за вземане – EcoRecycle',
         html: `
           <div style="font-family:sans-serif;max-width:560px;margin:auto">
-            <h2 style="color:#16a34a">Здравейте, ${data.name}!</h2>
+            <h2 style="color:#16a34a">Здравейте, ${this.escapeHtml(data.name)}!</h2>
             <p>Заявката ви <strong>#${data.requestId.slice(0, 8).toUpperCase()}</strong> е насрочена за вземане.</p>
             <p>📅 Дата: <strong>${dateStr}</strong></p>
             ${timeRow}
-            <p>📍 Адрес: <strong>${data.address}</strong></p>
+            <p>📍 Адрес: <strong>${this.escapeHtml(data.address)}</strong></p>
             <p>Моля, осигурете достъп до техниката на посочения адрес.</p>
             <br/>
             <p style="color:#6b7280">С уважение,<br/>Екипът на EcoRecycle</p>
@@ -148,11 +148,11 @@ export class MailService {
         subject: 'Вземането ви е потвърдено – EcoRecycle',
         html: `
           <div style="font-family:sans-serif;max-width:560px;margin:auto">
-            <h2 style="color:#16a34a">Здравейте, ${data.name}!</h2>
+            <h2 style="color:#16a34a">Здравейте, ${this.escapeHtml(data.name)}!</h2>
             <p>Радваме се да ви информираме, че заявката ви <strong>#${data.requestId.slice(0, 8).toUpperCase()}</strong> вече е активно насрочена.</p>
             <p>📅 Дата: <strong>${dateStr}</strong></p>
             ${timeRow}
-            <p>📍 Адрес: <strong>${data.address}</strong></p>
+            <p>📍 Адрес: <strong>${this.escapeHtml(data.address)}</strong></p>
             <br/>
             <p style="color:#6b7280">С уважение,<br/>Екипът на EcoRecycle</p>
           </div>
@@ -181,7 +181,7 @@ export class MailService {
         subject: 'Заявката ви е отменена – EcoRecycle',
         html: `
           <div style="font-family:sans-serif;max-width:560px;margin:auto">
-            <h2 style="color:#dc2626">Здравейте, ${data.name},</h2>
+            <h2 style="color:#dc2626">Здравейте, ${this.escapeHtml(data.name)},</h2>
             <p>Заявката ви <strong>#${data.requestId.slice(0, 8).toUpperCase()}</strong> беше отменена.</p>
             <p>Ако желаете, можете да подадете нова заявка по всяко време от платформата.</p>
             <br/>
