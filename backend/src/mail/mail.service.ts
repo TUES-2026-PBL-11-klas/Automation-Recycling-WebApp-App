@@ -13,6 +13,53 @@ export class MailService {
   private readonly from =
     process.env.FROM_EMAIL ?? 'EcoRecycle <noreply@ecorecycle.bg>';
 
+  // Values that originate from user input (names, free-text notes) are escaped
+  // before interpolation so a display name cannot inject markup into the email.
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Sends a reminder queued as a Notification row. Returns whether it was sent,
+  // so the worker can record SENT or FAILED rather than assuming success.
+  async sendReminder(
+    to: string,
+    name: string,
+    message: string,
+  ): Promise<boolean> {
+    if (!this.resend) {
+      this.logger.warn(`RESEND_API_KEY not set — skipped reminder to ${to}`);
+      return false;
+    }
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.from,
+        to: [to],
+        subject: 'Напомняне за вземане – EcoRecycle',
+        html: `
+          <div style="font-family:sans-serif;max-width:560px;margin:auto">
+            <h2 style="color:#16a34a">Здравейте, ${this.escapeHtml(name)}!</h2>
+            <p>${this.escapeHtml(message)}</p>
+            <br/>
+            <p style="color:#6b7280">С уважение,<br/>Екипът на EcoRecycle</p>
+          </div>
+        `,
+      });
+      if (error) {
+        this.logger.error(`Reminder to ${to} rejected by Resend`, error);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      this.logger.error(`Failed to send reminder to ${to}`, e);
+      return false;
+    }
+  }
+
   async sendPickupConfirmation(
     to: string,
     data: {
