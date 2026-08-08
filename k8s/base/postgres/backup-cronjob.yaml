@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: recycling-app
+spec:
+  # 02:15 daily. Off the hour so it does not collide with everything else that
+  # runs on the hour.
+  schedule: "15 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  # A missed window (cluster asleep, node pressure) should still run rather than
+  # skipping a day silently.
+  startingDeadlineSeconds: 3600
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70          # postgres user in the alpine image
+            fsGroup: 70
+          containers:
+            - name: pg-dump
+              # Same major version as the server: pg_dump refuses to dump from a
+              # newer server than itself.
+              image: postgres:16-alpine
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: PGHOST
+                  value: postgres
+                - name: PGDATABASE
+                  value: recycling
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: username
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: password
+                - name: RETENTION_DAYS
+                  value: "14"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+                  TMP="/backup/.in-progress-${STAMP}.sql.gz"
+                  FINAL="/backup/recycling-${STAMP}.sql.gz"
+
+                  echo "dumping ${PGDATABASE} from ${PGHOST}"
+                  # Written to a temp name and moved only on success, so a failed
+                  # or truncated dump can never be mistaken for a good one.
+                  pg_dump --no-owner --no-privileges | gzip -9 > "$TMP"
+                  mv "$TMP" "$FINAL"
+
+                  # Prove the archive is readable rather than trusting the exit code
+                  gzip -t "$FINAL"
+                  echo "wrote $(du -h "$FINAL" | cut -f1) to ${FINAL}"
+
+                  find /backup -name 'recycling-*.sql.gz' -type f \
+                    -mtime "+${RETENTION_DAYS}" -print -delete
+                  find /backup -name '.in-progress-*' -type f -mtime +1 -delete
+
+                  echo "retained backups:"
+                  ls -1sh /backup/recycling-*.sql.gz 2>/dev/null || echo "  (none yet)"
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "500m"
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc

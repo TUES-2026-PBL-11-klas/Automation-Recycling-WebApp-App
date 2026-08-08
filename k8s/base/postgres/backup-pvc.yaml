@@ -1,0 +1,18 @@
+# Deliberately a separate claim from postgres-pvc: a dump sitting on the same
+# volume as the data it protects is not a backup.
+#
+# This still lives in the cluster, so it covers the likely failures — a bad
+# migration, a dropped table, corruption — but NOT loss of the cluster or the
+# node's disk. Before real customer data, the CronJob's destination should be
+# object storage outside the cluster.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: recycling-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

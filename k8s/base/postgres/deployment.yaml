@@ -5,6 +5,11 @@ metadata:
   namespace: recycling-app
 spec:
   replicas: 1
+  # The default RollingUpdate starts the replacement before terminating the old
+  # pod, and both would mount the same ReadWriteOnce volume — which at best
+  # wedges the rollout and at worst has two servers on one data directory.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: postgres
