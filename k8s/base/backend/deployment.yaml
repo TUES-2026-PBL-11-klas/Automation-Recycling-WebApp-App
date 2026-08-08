@@ -37,6 +37,14 @@ spec:
                 secretKeyRef:
                   name: backend-secret
                   key: jwt-secret
+            # Optional: without it the app still starts, but pickup
+            # confirmation emails are skipped and only logged.
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: resend-api-key
+                  optional: true
           resources:
             requests:
               memory: "128Mi"
