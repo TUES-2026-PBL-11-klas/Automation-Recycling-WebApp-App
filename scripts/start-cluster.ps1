@@ -17,13 +17,19 @@
 .PARAMETER SkipForwards
     Start minikube and report status, but do not open any tunnels.
 
+.PARAMETER WithApp
+    Also start the backend and frontend dev servers via start-app.ps1. They do
+    not need the cluster; this is just for bringing everything up at once.
+
 .EXAMPLE
     .\scripts\start-cluster.ps1
     .\scripts\start-cluster.ps1 -ForwardsOnly
+    .\scripts\start-cluster.ps1 -WithApp
 #>
 param(
     [switch]$ForwardsOnly,
-    [switch]$SkipForwards
+    [switch]$SkipForwards,
+    [switch]$WithApp
 )
 
 $ErrorActionPreference = 'Stop'
@@ -112,13 +118,18 @@ try {
     Write-Warn 'could not read the ArgoCD secret'
 }
 
+if ($WithApp) {
+    & (Join-Path $PSScriptRoot 'start-app.ps1')
+}
+
 Write-Step 'Ready'
 Write-Host @'
   Each tunnel runs in its own window — closing one stops that tunnel.
   Port-forwards break when the cluster restarts or a pod is replaced;
   re-run with -ForwardsOnly to reopen them.
 
-  The app itself does not need any of this. To run it locally:
-    cd backend  ; npm run start:dev
-    cd frontend ; npm run dev
+  The app itself does not need any of this. Run it with:
+    .\scripts\start-app.ps1
+  or start both at once with:
+    .\scripts\start-cluster.ps1 -WithApp
 '@ -ForegroundColor Gray
