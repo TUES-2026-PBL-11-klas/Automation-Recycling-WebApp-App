@@ -116,7 +116,7 @@ jobs:
       # advisories that actually have a fix available, so an unpatched base-image
       # OS CVE does not block every deploy; HIGH and CRITICAL with a fix do.
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/recycling-backend:${{ github.sha }}
           severity: HIGH,CRITICAL
@@ -124,7 +124,7 @@ jobs:
           exit-code: "1"
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/recycling-frontend:${{ github.sha }}
           severity: HIGH,CRITICAL
