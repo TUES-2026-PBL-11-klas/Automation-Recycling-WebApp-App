@@ -36,6 +36,13 @@ WORKDIR /app
 
 RUN apk add --no-cache openssl
 
+# npm ships inside the base image and is never invoked at runtime — the app
+# starts with `node dist/src/main`, and the migrate init container calls the
+# prisma binary directly rather than through npx. Removing it drops 16 MB and
+# npm's own bundled dependency tree (sigstore and friends), which Trivy flags
+# as part of the image even though nothing here can execute it.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
 
 COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules

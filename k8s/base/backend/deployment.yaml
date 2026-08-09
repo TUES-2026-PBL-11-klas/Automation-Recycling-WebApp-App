@@ -39,7 +39,8 @@ spec:
         - name: migrate
           image: boqnbabanin/recycling-backend
           imagePullPolicy: IfNotPresent
-          command: ["npx", "prisma", "migrate", "deploy"]
+          # Direct binary, not npx — the production image no longer ships npm.
+          command: ["node_modules/.bin/prisma", "migrate", "deploy"]
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -88,6 +89,11 @@ spec:
           env:
             - name: PORT
               value: "4000"
+            # Without this the logger falls back to the pino-pretty dev
+            # transport, which is a devDependency and does not exist in the
+            # production image — the app throws on startup trying to load it.
+            - name: NODE_ENV
+              value: "production"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
