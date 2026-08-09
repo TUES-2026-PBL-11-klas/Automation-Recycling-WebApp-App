@@ -11,6 +11,12 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# npm ships inside the base image and is never invoked at runtime — the
+# standalone server starts with `node server.js`. Removing it drops npm's own
+# bundled dependency tree (sigstore and friends), which a vulnerability scan
+# otherwise flags as part of the image even though nothing here can run it.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
