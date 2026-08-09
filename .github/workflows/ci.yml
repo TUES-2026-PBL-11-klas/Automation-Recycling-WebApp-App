@@ -115,10 +115,19 @@ jobs:
       # Scan the images that were just pushed. ignore-unfixed keeps the gate on
       # advisories that actually have a fix available, so an unpatched base-image
       # OS CVE does not block every deploy; HIGH and CRITICAL with a fix do.
+      #
+      # scanners: vuln only — trivy-action also runs its secret scanner by
+      # default, and the severity filter above does not apply to secret
+      # findings. jsonwebtoken/jwa/jws (real runtime deps here, needed to
+      # verify JWTs) bundle dummy RSA keys in their own test fixtures, and
+      # Trivy flags any PEM private key as CRITICAL regardless of whether it
+      # could ever be used as one. That fixture, not a real vulnerability or a
+      # real secret, is what failed this build with a report full of zeros.
       - name: Scan backend image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/recycling-backend:${{ github.sha }}
+          scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
@@ -127,6 +136,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/recycling-frontend:${{ github.sha }}
+          scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
