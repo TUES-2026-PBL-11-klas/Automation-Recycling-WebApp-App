@@ -1,6 +1,40 @@
-# Setup Guide — Local Infrastructure (WSL2 + k3s)
+# Setup Guide — Local Infrastructure
 
-## Prerequisites
+## Running it day to day
+
+Two scripts cover the normal cycle. From the repository root in PowerShell:
+
+```powershell
+.\scripts\start-cluster.ps1          # Docker + minikube + a window per tunnel
+.\scripts\start-cluster.ps1 -ForwardsOnly   # cluster already up, tunnels died
+.\scripts\stop-cluster.ps1           # close tunnels, stop minikube, free the RAM
+```
+
+`start-cluster.ps1` prints each URL and the ArgoCD admin password, and skips any
+port already in use rather than opening a window that immediately fails.
+Port-forwards break whenever the cluster restarts or a pod is replaced — that is
+normal, and `-ForwardsOnly` reopens them.
+
+**The application does not need any of this.** The cluster is only for the
+deployment, monitoring and GitOps side. To run the app itself:
+
+```powershell
+cd backend  ; npm run start:dev     # http://localhost:4000
+cd frontend ; npm run dev           # http://localhost:3000
+```
+
+The database is a native Windows PostgreSQL service, so nothing needs
+containerising to develop against it. Note the local database and the one inside
+the cluster are entirely separate and share no data.
+
+---
+
+## First-time cluster setup (WSL2 + k3s)
+
+> The sections below describe the original k3s-in-WSL2 build. The working local
+> environment is **minikube with the Docker driver on Windows**, which the
+> scripts above assume. Treat the rest of this file as reference for a fresh
+> build rather than a description of the current setup.
 
 Run all commands inside **WSL2 (Ubuntu)**.
 
