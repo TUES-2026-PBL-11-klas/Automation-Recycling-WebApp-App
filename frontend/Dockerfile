@@ -11,6 +11,13 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# The base image lags Alpine's package index, so its libssl3/libcrypto3 carry
+# fixed-but-unpatched CVEs (e.g. CVE-2026-45447, a use-after-free in
+# PKCS7_verify). The backend image picks up current versions as a side effect of
+# installing openssl; this stage installs nothing, so it needs an explicit
+# upgrade or it ships whatever the base was built with.
+RUN apk upgrade --no-cache libssl3 libcrypto3
+
 # npm ships inside the base image and is never invoked at runtime — the
 # standalone server starts with `node server.js`. Removing it drops npm's own
 # bundled dependency tree (sigstore and friends), which a vulnerability scan
