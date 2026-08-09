@@ -6,9 +6,9 @@ kind: Kustomization
 # and they cannot drift apart. CI rewrites the newTag lines below.
 images:
   - name: boqnbabanin/recycling-backend
-    newTag: fe79058baa6cc675ea8532a37060e400b57bf2f8
+    newTag: ac4be50689b2531b53c357922bc24908da5105cf
   - name: boqnbabanin/recycling-frontend
-    newTag: fe79058baa6cc675ea8532a37060e400b57bf2f8
+    newTag: ac4be50689b2531b53c357922bc24908da5105cf
 
 resources:
   - namespace.yaml
