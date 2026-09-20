@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 # Prisma probes libssl to pick a query engine; without openssl installed it
@@ -19,7 +19,7 @@ RUN npm run build
 # eslint, typescript, the nest CLI) never reaches the runtime image. Prisma is a
 # runtime dependency now — the app loads its client and the migration init
 # container runs its CLI — so generate runs here too, against the pruned tree.
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 
 RUN apk add --no-cache openssl
@@ -31,7 +31,7 @@ COPY prisma ./prisma
 RUN npx prisma generate
 
 
-FROM node:20-alpine AS production
+FROM node:26-alpine AS production
 WORKDIR /app
 
 RUN apk add --no-cache openssl
